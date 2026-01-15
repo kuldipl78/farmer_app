@@ -4,15 +4,39 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { View, Text, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
 // Import working screens
 import ProfileScreen from '../screens/ProfileScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
 import HomeScreen from '../screens/customer/HomeScreen';
 import CartScreen from '../screens/customer/CartScreen';
 import OrdersScreen from '../screens/customer/OrdersScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+
+// Profile Stack Navigator
+function ProfileStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen 
+        name="ProfileMain" 
+        component={ProfileScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="EditProfile" 
+        component={EditProfileScreen}
+        options={{ 
+          title: 'Edit Profile',
+          headerStyle: { backgroundColor: '#16a34a' },
+          headerTintColor: '#fff',
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
 
 // Temporary placeholder screens for farmer
 function FarmerDashboardScreen() {
@@ -37,6 +61,7 @@ function FarmerProductsScreen() {
 
 export default function MainNavigator() {
   const { isFarmer, isCustomer } = useAuth();
+  const cart = useCart(); // CartProvider wraps the app, so this is safe
 
   if (isFarmer) {
     return (
@@ -82,14 +107,30 @@ export default function MainNavigator() {
         />
         <Tab.Screen 
           name="Profile" 
-          component={ProfileScreen}
-          options={{ title: 'Profile' }}
+          component={ProfileStack}
+          options={{ title: 'Profile', headerShown: false }}
         />
       </Tab.Navigator>
     );
   }
 
   if (isCustomer) {
+    const CartIconWithBadge = ({ focused, color, size }) => {
+      const itemCount = cart?.itemCount || 0;
+      return (
+        <View style={styles.iconContainer}>
+          <Ionicons name={focused ? 'cart' : 'cart-outline'} size={size} color={color} />
+          {itemCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {itemCount > 99 ? '99+' : itemCount}
+              </Text>
+            </View>
+          )}
+        </View>
+      );
+    };
+
     return (
       <Tab.Navigator
         screenOptions={({ route }) => ({
@@ -98,12 +139,15 @@ export default function MainNavigator() {
 
             if (route.name === 'Home') {
               iconName = focused ? 'home' : 'home-outline';
+              return <Ionicons name={iconName} size={size} color={color} />;
             } else if (route.name === 'Cart') {
-              iconName = focused ? 'cart' : 'cart-outline';
+              return <CartIconWithBadge focused={focused} color={color} size={size} />;
             } else if (route.name === 'Orders') {
               iconName = focused ? 'list' : 'list-outline';
+              return <Ionicons name={iconName} size={size} color={color} />;
             } else if (route.name === 'Profile') {
               iconName = focused ? 'person' : 'person-outline';
+              return <Ionicons name={iconName} size={size} color={color} />;
             }
 
             return <Ionicons name={iconName} size={size} color={color} />;
@@ -121,8 +165,8 @@ export default function MainNavigator() {
         <Tab.Screen name="Orders" component={OrdersScreen} />
         <Tab.Screen 
           name="Profile" 
-          component={ProfileScreen}
-          options={{ title: 'Profile' }}
+          component={ProfileStack}
+          options={{ title: 'Profile', headerShown: false }}
         />
       </Tab.Navigator>
     );
@@ -150,5 +194,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
     textAlign: 'center',
+  },
+  iconContainer: {
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -10,
+    backgroundColor: '#dc2626',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });

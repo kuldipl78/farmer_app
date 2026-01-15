@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,33 +8,76 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Image
+  Image,
+  StyleSheet
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { profileAPI } from '../services/api';
 
 export default function EditProfileScreen({ navigation }) {
-  const { user, token } = useAuth();
+  const { user, token, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   
   const [formData, setFormData] = useState({
-    firstName: user?.first_name || '',
-    lastName: user?.last_name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    bio: user?.bio || '',
-    address: user?.address || '',
-    city: user?.city || '',
-    state: user?.state || '',
-    zipCode: user?.zip_code || '',
-    farmName: user?.farm_name || '',
-    farmSize: user?.farm_size || '',
-    farmingExperience: user?.farming_experience || '',
-    specialties: user?.specialties || '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
   });
+
+  const loadProfileImage = async () => {
+    try {
+      if (user?.id) {
+        const storedImageUri = await AsyncStorage.getItem(`profile_image_${user.id}`);
+        if (storedImageUri) {
+          setProfileImage({ uri: storedImageUri });
+        } else if (user?.profile_image) {
+          setProfileImage({ uri: user.profile_image });
+        } else {
+          setProfileImage(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading profile image:', error);
+    }
+  };
+
+  // Load profile image from storage
+  useEffect(() => {
+    loadProfileImage();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        firstName: user?.first_name || '',
+        lastName: user?.last_name || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+      });
+      loadProfileImage();
+    }
+  }, [user]);
+
+  // Refresh user data when screen comes into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (user) {
+        setFormData({
+          firstName: user?.first_name || '',
+          lastName: user?.last_name || '',
+          email: user?.email || '',
+          phone: user?.phone || '',
+        });
+        loadProfileImage();
+      }
+    });
+    return unsubscribe;
+  }, [navigation, user]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -54,33 +97,92 @@ export default function EditProfileScreen({ navigation }) {
       quality: 1,
     });
 
-    if (!result.canceled) {
-      setProfileImage(result.assets[0]);
+    if (!result.canceled && result.assets && result.assets[0]) {
+      const selectedImage = result.assets[0];
+      setProfileImage(selectedImage);
+      
+      // Save image URI to AsyncStorage for persistence
+      try {
+        await AsyncStorage.setItem(`profile_image_${user?.id}`, selectedImage.uri);
+        
+        // Also update user context with image URI
+        if (updateUser) {
+          await updateUser({
+            ...user,
+            profile_image: selectedImage.uri,
+          });
+        }
+      } catch (error) {
+        console.error('Error saving profile image:', error);
+        Alert.alert('Warning', 'Image selected but could not be saved. Please try again.');
+      }
     }
   };
 
   const handleSave = async () => {
-    if (!formData.firstName || !formData.lastName || !formData.email) {
-      Alert.alert('Error', 'Please fill in all required fields');
+    // Validate required fields
+    if (!formData.firstName || !formData.lastName) {
+      Alert.alert('Error', 'First name and last name are required');
       return;
+    }
+
+    // Validate name length
+    if (formData.firstName.trim().length < 2) {
+      Alert.alert('Error', 'First name must be at least 2 characters');
+      return;
+    }
+
+    if (formData.lastName.trim().length < 2) {
+      Alert.alert('Error', 'Last name must be at least 2 characters');
+      return;
+    }
+
+    // Validate email format (if provided)
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    // Validate phone number format (if provided)
+    if (formData.phone && formData.phone.trim().length > 0) {
+      const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/;
+      if (!phoneRegex.test(formData.phone.trim())) {
+        Alert.alert('Error', 'Please enter a valid phone number');
+        return;
+      }
     }
 
     setLoading(true);
     try {
       const profileData = {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        phone: formData.phone,
-        // Note: Backend currently only supports first_name, last_name, and phone
-        // Additional fields would need backend support
+        first_name: formData.firstName.trim(),
+        last_name: formData.lastName.trim(),
+        phone: formData.phone?.trim() || null,
       };
 
-      await profileAPI.updateProfile(profileData, token);
+      const response = await profileAPI.updateProfile(profileData, token);
+      
+      // Update user in context (including profile image if selected)
+      if (updateUser) {
+        await updateUser({
+          ...user,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.phone || user?.phone,
+          profile_image: profileImage?.uri || user?.profile_image,
+        });
+      }
       
       Alert.alert(
         'Success',
         'Profile updated successfully!',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        [{ 
+          text: 'OK', 
+          onPress: () => {
+            // Refresh the profile screen
+            navigation.goBack();
+          }
+        }]
       );
     } catch (error) {
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to update profile';
@@ -91,217 +193,126 @@ export default function EditProfileScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <ScrollView className="flex-1">
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View className="bg-white px-6 py-4 border-b border-gray-200">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center">
-              <TouchableOpacity onPress={() => navigation.goBack()}>
-                <Ionicons name="arrow-back" size={24} color="#374151" />
-              </TouchableOpacity>
-              <Text className="text-xl font-bold text-gray-800 ml-4">Edit Profile</Text>
-            </View>
-            <TouchableOpacity onPress={handleSave} disabled={loading}>
-              <Text className="text-primary-600 font-semibold">Save</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#1f2937" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit Profile</Text>
+          <TouchableOpacity 
+            onPress={handleSave} 
+            disabled={loading}
+            style={styles.saveButton}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#16a34a" />
+            ) : (
+              <Text style={styles.saveButtonText}>Save</Text>
+            )}
+          </TouchableOpacity>
         </View>
 
-        <View className="px-6 py-6">
+        <View style={styles.content}>
           {/* Profile Picture */}
-          <View className="items-center mb-8">
-            <TouchableOpacity onPress={pickImage} className="relative">
+          <View style={styles.avatarContainer}>
+            <TouchableOpacity onPress={pickImage} style={styles.avatarButton}>
               {profileImage ? (
                 <Image
                   source={{ uri: profileImage.uri }}
-                  className="w-24 h-24 rounded-full"
+                  style={styles.avatarImage}
                 />
               ) : (
-                <View className="w-24 h-24 bg-primary-600 rounded-full items-center justify-center">
-                  <Text className="text-white text-2xl font-bold">
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
                     {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
                   </Text>
                 </View>
               )}
-              <View className="absolute -bottom-1 -right-1 w-8 h-8 bg-primary-600 rounded-full items-center justify-center border-2 border-white">
+              (iOS)
+              
+              › Using Expo Go
+              › Press s │ switch to development build
+              
+              › Press a │ open Android
+              › Press w │ open web
+              <View style={styles.cameraIcon}>
                 <Ionicons name="camera" size={16} color="white" />
               </View>
             </TouchableOpacity>
-            <Text className="text-gray-600 mt-2">Tap to change photo</Text>
+            <Text style={styles.avatarHint}>Tap to change photo</Text>
           </View>
 
           {/* Basic Information */}
-          <View className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 mb-6">
-            <Text className="text-lg font-semibold text-gray-800 mb-4">Basic Information</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Basic Information</Text>
             
-            <View className="flex-row space-x-4 mb-4">
-              <View className="flex-1">
-                <Text className="text-gray-700 mb-2 font-medium">First Name *</Text>
+            <View style={styles.row}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>First Name *</Text>
                 <TextInput
-                  className="border border-gray-300 rounded-lg px-4 py-3 text-base"
+                  style={styles.input}
                   value={formData.firstName}
                   onChangeText={(value) => handleInputChange('firstName', value)}
                   placeholder="First name"
+                  placeholderTextColor="#9CA3AF"
                 />
               </View>
-              <View className="flex-1">
-                <Text className="text-gray-700 mb-2 font-medium">Last Name *</Text>
+              <View style={[styles.inputGroup, styles.inputGroupRight]}>
+                <Text style={styles.label}>Last Name *</Text>
                 <TextInput
-                  className="border border-gray-300 rounded-lg px-4 py-3 text-base"
+                  style={styles.input}
                   value={formData.lastName}
                   onChangeText={(value) => handleInputChange('lastName', value)}
                   placeholder="Last name"
+                  placeholderTextColor="#9CA3AF"
                 />
               </View>
             </View>
 
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2 font-medium">Email *</Text>
-              <TextInput
-                className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-                value={formData.email}
-                onChangeText={(value) => handleInputChange('email', value)}
-                placeholder="Email address"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+            <View style={styles.inputGroupFull}>
+              <Text style={styles.label}>Email</Text>
+              <View style={styles.emailContainer}>
+                <TextInput
+                  style={[styles.input, styles.inputDisabled]}
+                  value={formData.email}
+                  editable={false}
+                  placeholder="Email address"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <Ionicons name="lock-closed" size={16} color="#9CA3AF" style={styles.lockIcon} />
+              </View>
+              <Text style={styles.hint}>Email cannot be changed for security reasons</Text>
             </View>
 
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2 font-medium">Phone</Text>
+            <View style={styles.inputGroupFull}>
+              <Text style={styles.label}>Phone Number</Text>
               <TextInput
-                className="border border-gray-300 rounded-lg px-4 py-3 text-base"
+                style={styles.input}
                 value={formData.phone}
                 onChangeText={(value) => handleInputChange('phone', value)}
-                placeholder="Phone number"
+                placeholder="Enter your phone number"
+                placeholderTextColor="#9CA3AF"
                 keyboardType="phone-pad"
+                maxLength={15}
               />
-            </View>
-
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2 font-medium">Bio</Text>
-              <TextInput
-                className="border border-gray-300 rounded-lg px-4 py-3 text-base h-20"
-                value={formData.bio}
-                onChangeText={(value) => handleInputChange('bio', value)}
-                placeholder="Tell us about yourself..."
-                multiline
-                textAlignVertical="top"
-              />
+              <Text style={styles.hint}>Optional - Add your phone number for order updates</Text>
             </View>
           </View>
-
-          {/* Address Information */}
-          <View className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 mb-6">
-            <Text className="text-lg font-semibold text-gray-800 mb-4">Address</Text>
-            
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2 font-medium">Street Address</Text>
-              <TextInput
-                className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-                value={formData.address}
-                onChangeText={(value) => handleInputChange('address', value)}
-                placeholder="Street address"
-              />
-            </View>
-
-            <View className="flex-row space-x-4 mb-4">
-              <View className="flex-1">
-                <Text className="text-gray-700 mb-2 font-medium">City</Text>
-                <TextInput
-                  className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-                  value={formData.city}
-                  onChangeText={(value) => handleInputChange('city', value)}
-                  placeholder="City"
-                />
-              </View>
-              <View className="flex-1">
-                <Text className="text-gray-700 mb-2 font-medium">State</Text>
-                <TextInput
-                  className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-                  value={formData.state}
-                  onChangeText={(value) => handleInputChange('state', value)}
-                  placeholder="State"
-                />
-              </View>
-            </View>
-
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2 font-medium">ZIP Code</Text>
-              <TextInput
-                className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-                value={formData.zipCode}
-                onChangeText={(value) => handleInputChange('zipCode', value)}
-                placeholder="ZIP code"
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-
-          {/* Farm Information (for farmers) */}
-          {user?.role === 'farmer' && (
-            <View className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 mb-6">
-              <Text className="text-lg font-semibold text-gray-800 mb-4">Farm Information</Text>
-              
-              <View className="mb-4">
-                <Text className="text-gray-700 mb-2 font-medium">Farm Name</Text>
-                <TextInput
-                  className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-                  value={formData.farmName}
-                  onChangeText={(value) => handleInputChange('farmName', value)}
-                  placeholder="Your farm name"
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-gray-700 mb-2 font-medium">Farm Size (acres)</Text>
-                <TextInput
-                  className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-                  value={formData.farmSize}
-                  onChangeText={(value) => handleInputChange('farmSize', value)}
-                  placeholder="Farm size in acres"
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-gray-700 mb-2 font-medium">Years of Experience</Text>
-                <TextInput
-                  className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-                  value={formData.farmingExperience}
-                  onChangeText={(value) => handleInputChange('farmingExperience', value)}
-                  placeholder="Years of farming experience"
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-gray-700 mb-2 font-medium">Specialties</Text>
-                <TextInput
-                  className="border border-gray-300 rounded-lg px-4 py-3 text-base h-20"
-                  value={formData.specialties}
-                  onChangeText={(value) => handleInputChange('specialties', value)}
-                  placeholder="What do you specialize in growing?"
-                  multiline
-                  textAlignVertical="top"
-                />
-              </View>
-            </View>
-          )}
 
           {/* Save Button */}
           <TouchableOpacity
-            className="bg-primary-600 py-4 rounded-lg mb-6"
+            style={[styles.saveButtonFull, loading && styles.saveButtonDisabled]}
             onPress={handleSave}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text className="text-white text-lg font-semibold text-center">
-                Save Changes
-              </Text>
+              <Text style={styles.saveButtonFullText}>Save Changes</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -309,3 +320,173 @@ export default function EditProfileScreen({ navigation }) {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'white',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    flex: 1,
+    marginLeft: 8,
+  },
+  saveButton: {
+    padding: 8,
+  },
+  saveButtonText: {
+    color: '#16a34a',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  content: {
+    padding: 24,
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  avatarButton: {
+    position: 'relative',
+  },
+  avatar: {
+    width: 96,
+    height: 96,
+    backgroundColor: '#16a34a',
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarImage: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+  },
+  avatarText: {
+    color: 'white',
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  cameraIcon: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    backgroundColor: '#16a34a',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: 'white',
+  },
+  avatarHint: {
+    color: '#6b7280',
+    fontSize: 14,
+    marginTop: 8,
+  },
+  section: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 20,
+  },
+  row: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  inputGroup: {
+    flex: 1,
+  },
+  inputGroupRight: {
+    marginLeft: 12,
+  },
+  inputGroupFull: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1f2937',
+    backgroundColor: 'white',
+  },
+  inputDisabled: {
+    backgroundColor: '#f3f4f6',
+    color: '#6b7280',
+  },
+  emailContainer: {
+    position: 'relative',
+  },
+  lockIcon: {
+    position: 'absolute',
+    right: 16,
+    top: 14,
+  },
+  hint: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
+  },
+  saveButtonFull: {
+    backgroundColor: '#16a34a',
+    borderRadius: 8,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveButtonFullText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+});

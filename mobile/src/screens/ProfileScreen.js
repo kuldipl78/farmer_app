@@ -1,11 +1,52 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, Alert, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProfileScreen({ navigation }) {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
+  const [profileImage, setProfileImage] = useState(null);
+
+  // Load profile image from storage
+  const loadProfileImage = async () => {
+    try {
+      if (user?.id) {
+        const storedImageUri = await AsyncStorage.getItem(`profile_image_${user.id}`);
+        if (storedImageUri) {
+          setProfileImage({ uri: storedImageUri });
+        } else if (user?.profile_image) {
+          setProfileImage({ uri: user.profile_image });
+        } else {
+          setProfileImage(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading profile image:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadProfileImage();
+  }, [user]);
+
+  // Refresh user data when screen comes into focus (after editing)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem('user');
+        if (storedUser && updateUser) {
+          const userData = JSON.parse(storedUser);
+          updateUser(userData);
+        }
+        loadProfileImage();
+      } catch (error) {
+        console.error('Error refreshing user data:', error);
+      }
+    });
+    return unsubscribe;
+  }, [navigation, updateUser, user]);
 
   const handleLogout = () => {
     Alert.alert(
@@ -24,18 +65,28 @@ export default function ProfileScreen({ navigation }) {
         {/* Profile Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
-              </Text>
-            </View>
+            {profileImage ? (
+              <Image
+                source={profileImage}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
+                </Text>
+              </View>
+            )}
             <Text style={styles.name}>
               {user?.first_name} {user?.last_name}
             </Text>
             <Text style={styles.email}>{user?.email}</Text>
+            {user?.phone && (
+              <Text style={styles.phone}>{user?.phone}</Text>
+            )}
             <View style={styles.roleBadge}>
               <Text style={styles.roleText}>
-                {user?.role}
+                {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
               </Text>
             </View>
           </View>
@@ -46,7 +97,7 @@ export default function ProfileScreen({ navigation }) {
           <View style={styles.menuCard}>
             <TouchableOpacity 
               style={[styles.menuItem, styles.menuItemBorder]}
-              onPress={() => Alert.alert('Coming Soon', 'Edit profile feature coming soon!')}
+              onPress={() => navigation.navigate('EditProfile')}
             >
               <Ionicons name="person-outline" size={24} color="#6B7280" />
               <Text style={styles.menuText}>Edit Profile</Text>
@@ -133,6 +184,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
   },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 16,
+    backgroundColor: '#f3f4f6',
+  },
   avatarText: {
     color: 'white',
     fontSize: 24,
@@ -146,6 +204,12 @@ const styles = StyleSheet.create({
   email: {
     color: '#6b7280',
     marginTop: 4,
+    fontSize: 14,
+  },
+  phone: {
+    color: '#6b7280',
+    marginTop: 4,
+    fontSize: 14,
   },
   roleBadge: {
     backgroundColor: '#f0f9ff',

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 import { productsAPI, categoriesAPI } from '../../services/api';
 
 export default function HomeScreen() {
@@ -22,6 +23,7 @@ export default function HomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   
   const { token, user } = useAuth();
+  const { addToCart, getItemQuantity } = useCart();
 
   useEffect(() => {
     loadData();
@@ -49,6 +51,15 @@ export default function HomeScreen() {
     const matchesCategory = !selectedCategory || product.category_id === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  const handleAddToCart = (product) => {
+    addToCart(product, 1);
+    Alert.alert(
+      'Added to Cart',
+      `${product.name} has been added to your cart`,
+      [{ text: 'OK' }]
+    );
+  };
 
   if (loading) {
     return (
@@ -170,8 +181,18 @@ export default function HomeScreen() {
                       </Text>
                     </View>
                     
-                    <TouchableOpacity style={styles.addButton}>
+                    <TouchableOpacity 
+                      style={styles.addButton}
+                      onPress={() => handleAddToCart(product)}
+                    >
                       <Ionicons name="add" size={16} color="white" />
+                      {getItemQuantity(product.id) > 0 && (
+                        <View style={styles.cartBadge}>
+                          <Text style={styles.cartBadgeText}>
+                            {getItemQuantity(product.id)}
+                          </Text>
+                        </View>
+                      )}
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -369,5 +390,24 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     marginLeft: 8,
+    position: 'relative',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#dc2626',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  cartBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });

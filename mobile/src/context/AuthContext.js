@@ -93,6 +93,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUser = async (updatedUserData) => {
+    try {
+      const newUserData = { ...user, ...updatedUserData };
+      setUser(newUserData);
+      await AsyncStorage.setItem('user', JSON.stringify(newUserData));
+    } catch (error) {
+      console.error('Update user error:', error);
+    }
+  };
+
   const value = {
     user,
     token,
@@ -100,6 +110,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    updateUser,
     isAuthenticated: !!token,
     isFarmer: user?.role === 'farmer',
     isCustomer: user?.role === 'customer',
