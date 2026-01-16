@@ -148,7 +148,10 @@ export default function OrdersScreen({ navigation }) {
           </Text>
           <TouchableOpacity
             style={styles.shopButton}
-            onPress={() => navigation.navigate('Home')}
+            onPress={() => {
+              // Navigate to Home tab
+              navigation.getParent()?.navigate('Home') || navigation.navigate('Home');
+            }}
           >
             <Text style={styles.shopButtonText}>Start Shopping</Text>
           </TouchableOpacity>

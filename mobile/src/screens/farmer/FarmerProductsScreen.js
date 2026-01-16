@@ -8,7 +8,8 @@ import {
   RefreshControl,
   Alert,
   ActivityIndicator,
-  Image
+  Image,
+  StyleSheet
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -78,22 +79,22 @@ export default function FarmerProductsScreen({ navigation }) {
   };
 
   const renderProduct = ({ item }) => (
-    <View className="bg-white mx-4 mb-4 rounded-lg shadow-sm border border-gray-200">
-      <View className="p-4">
-        <View className="flex-row justify-between items-start mb-3">
-          <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-800">{item.name}</Text>
-            <Text className="text-gray-600 mt-1">{item.description}</Text>
+    <View style={styles.productCard}>
+      <View style={styles.productContent}>
+        <View style={styles.productHeader}>
+          <View style={styles.productInfo}>
+            <Text style={styles.productName}>{item.name}</Text>
+            <Text style={styles.productDescription}>{item.description}</Text>
           </View>
-          <View className="flex-row">
+          <View style={styles.productActions}>
             <TouchableOpacity
-              className="p-2"
+              style={styles.actionButton}
               onPress={() => navigation.navigate('AddProduct', { product: item, isEdit: true })}
             >
               <Ionicons name="pencil" size={20} color="#6B7280" />
             </TouchableOpacity>
             <TouchableOpacity
-              className="p-2"
+              style={styles.actionButton}
               onPress={() => handleDeleteProduct(item.id)}
             >
               <Ionicons name="trash" size={20} color="#EF4444" />
@@ -101,37 +102,39 @@ export default function FarmerProductsScreen({ navigation }) {
           </View>
         </View>
 
-        <View className="flex-row justify-between items-center">
-          <View className="flex-row items-center">
-            <Text className="text-xl font-bold text-primary-600">
+        <View style={styles.productDetails}>
+          <View style={styles.priceContainer}>
+            <Text style={styles.price}>
               ${item.price_per_unit}
             </Text>
-            <Text className="text-gray-600 ml-1">/{item.unit_type}</Text>
+            <Text style={styles.unit}>/{item.unit_type}</Text>
           </View>
           
-          <View className="flex-row items-center">
-            <View className={`px-2 py-1 rounded-full ${
-              item.quantity_available > 0 ? 'bg-green-100' : 'bg-red-100'
-            }`}>
-              <Text className={`text-xs font-medium ${
-                item.quantity_available > 0 ? 'text-green-800' : 'text-red-800'
-              }`}>
+          <View style={styles.badgesContainer}>
+            <View style={[
+              styles.badge,
+              item.quantity_available > 0 ? styles.badgeSuccess : styles.badgeDanger
+            ]}>
+              <Text style={[
+                styles.badgeText,
+                item.quantity_available > 0 ? styles.badgeTextSuccess : styles.badgeTextDanger
+              ]}>
                 {item.quantity_available > 0 ? 'In Stock' : 'Out of Stock'}
               </Text>
             </View>
             {item.is_organic && (
-              <View className="bg-green-100 px-2 py-1 rounded-full ml-2">
-                <Text className="text-xs font-medium text-green-800">Organic</Text>
+              <View style={[styles.badge, styles.badgeOrganic]}>
+                <Text style={[styles.badgeText, styles.badgeTextOrganic]}>Organic</Text>
               </View>
             )}
           </View>
         </View>
 
-        <View className="flex-row justify-between items-center mt-3 pt-3 border-t border-gray-200">
-          <Text className="text-gray-600">
+        <View style={styles.productFooter}>
+          <Text style={styles.footerText}>
             Quantity: {item.quantity_available} {item.unit_type}
           </Text>
-          <Text className="text-gray-600">
+          <Text style={styles.footerText}>
             Category: {item.category?.name}
           </Text>
         </View>
@@ -141,50 +144,50 @@ export default function FarmerProductsScreen({ navigation }) {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50">
-        <View className="flex-1 justify-center items-center">
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#16a34a" />
-          <Text className="text-gray-600 mt-4">Loading products...</Text>
+          <Text style={styles.loadingText}>Loading products...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View className="bg-white px-6 py-4 border-b border-gray-200">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-xl font-bold text-gray-800">My Products</Text>
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>My Products</Text>
           <TouchableOpacity
-            className="bg-primary-600 px-4 py-2 rounded-lg"
+            style={styles.addButton}
             onPress={() => navigation.navigate('AddProduct')}
           >
-            <View className="flex-row items-center">
+            <View style={styles.addButtonContent}>
               <Ionicons name="add" size={20} color="white" />
-              <Text className="text-white font-semibold ml-2">Add Product</Text>
+              <Text style={styles.addButtonText}>Add Product</Text>
             </View>
           </TouchableOpacity>
         </View>
       </View>
 
       {products.length === 0 ? (
-        <View className="flex-1 justify-center items-center px-6">
+        <View style={styles.emptyContainer}>
           <Ionicons name="leaf-outline" size={80} color="#9CA3AF" />
-          <Text className="text-xl font-semibold text-gray-800 mt-4 mb-2">
+          <Text style={styles.emptyTitle}>
             No products yet
           </Text>
-          <Text className="text-gray-600 text-center mb-8">
+          <Text style={styles.emptySubtitle}>
             Start by adding your first product to showcase your fresh produce
           </Text>
           
           <TouchableOpacity
-            className="bg-primary-600 px-6 py-3 rounded-lg"
+            style={styles.emptyAddButton}
             onPress={() => navigation.navigate('AddProduct')}
           >
-            <View className="flex-row items-center">
+            <View style={styles.addButtonContent}>
               <Ionicons name="add" size={20} color="white" />
-              <Text className="text-white font-semibold ml-2">Add Product</Text>
+              <Text style={styles.addButtonText}>Add Product</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -193,7 +196,7 @@ export default function FarmerProductsScreen({ navigation }) {
           data={products}
           renderItem={renderProduct}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={{ paddingVertical: 16 }}
+          contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
@@ -202,3 +205,184 @@ export default function FarmerProductsScreen({ navigation }) {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    color: '#6b7280',
+    fontSize: 16,
+  },
+  header: {
+    backgroundColor: 'white',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  addButton: {
+    backgroundColor: '#16a34a',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  addButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  emptyAddButton: {
+    backgroundColor: '#16a34a',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  listContent: {
+    paddingVertical: 16,
+  },
+  productCard: {
+    backgroundColor: 'white',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  productContent: {
+    padding: 16,
+  },
+  productHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  productInfo: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  productDescription: {
+    color: '#6b7280',
+    marginTop: 4,
+    fontSize: 14,
+  },
+  productActions: {
+    flexDirection: 'row',
+  },
+  actionButton: {
+    padding: 8,
+  },
+  productDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  price: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#16a34a',
+  },
+  unit: {
+    color: '#6b7280',
+    marginLeft: 4,
+    fontSize: 16,
+  },
+  badgesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  badgeSuccess: {
+    backgroundColor: '#dcfce7',
+  },
+  badgeDanger: {
+    backgroundColor: '#fee2e2',
+  },
+  badgeOrganic: {
+    backgroundColor: '#dcfce7',
+    marginLeft: 8,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  badgeTextSuccess: {
+    color: '#166534',
+  },
+  badgeTextDanger: {
+    color: '#991b1b',
+  },
+  badgeTextOrganic: {
+    color: '#166534',
+  },
+  productFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  footerText: {
+    color: '#6b7280',
+    fontSize: 14,
+  },
+});

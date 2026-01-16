@@ -12,6 +12,9 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import HomeScreen from '../screens/customer/HomeScreen';
 import CartScreen from '../screens/customer/CartScreen';
 import OrdersScreen from '../screens/customer/OrdersScreen';
+import FarmerDashboardScreen from '../screens/farmer/FarmerDashboardScreen';
+import FarmerProductsScreen from '../screens/farmer/FarmerProductsScreen';
+import AddProductScreen from '../screens/farmer/AddProductScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -38,24 +41,65 @@ function ProfileStack() {
   );
 }
 
-// Temporary placeholder screens for farmer
-function FarmerDashboardScreen() {
+// Farmer Dashboard Stack Navigator
+function FarmerDashboardStack() {
   return (
-    <View style={styles.placeholder}>
-      <Ionicons name="analytics" size={60} color="#16a34a" />
-      <Text style={styles.placeholderTitle}>Dashboard</Text>
-      <Text style={styles.placeholderText}>Farmer dashboard and analytics</Text>
-    </View>
+    <Stack.Navigator>
+      <Stack.Screen 
+        name="DashboardMain" 
+        component={FarmerDashboardScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="AddProduct" 
+        component={AddProductScreen}
+        options={{ 
+          title: 'Add Product',
+          headerStyle: { backgroundColor: '#16a34a' },
+          headerTintColor: '#fff',
+        }}
+      />
+      <Stack.Screen 
+        name="Analytics" 
+        component={FarmerDashboardScreen}
+        options={{ 
+          title: 'Analytics',
+          headerStyle: { backgroundColor: '#16a34a' },
+          headerTintColor: '#fff',
+        }}
+      />
+      <Stack.Screen 
+        name="EditProfile" 
+        component={EditProfileScreen}
+        options={{ 
+          title: 'Edit Profile',
+          headerStyle: { backgroundColor: '#16a34a' },
+          headerTintColor: '#fff',
+        }}
+      />
+    </Stack.Navigator>
   );
 }
 
-function FarmerProductsScreen() {
+// Farmer Products Stack Navigator
+function FarmerProductsStack() {
   return (
-    <View style={styles.placeholder}>
-      <Ionicons name="leaf" size={60} color="#16a34a" />
-      <Text style={styles.placeholderTitle}>My Products</Text>
-      <Text style={styles.placeholderText}>Manage your products</Text>
-    </View>
+    <Stack.Navigator>
+      <Stack.Screen 
+        name="ProductsMain" 
+        component={FarmerProductsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="AddProduct" 
+        component={AddProductScreen}
+        options={{ 
+          title: 'Add Product',
+          headerStyle: { backgroundColor: '#16a34a' },
+          headerTintColor: '#fff',
+        }}
+      />
+    </Stack.Navigator>
   );
 }
 
@@ -92,13 +136,13 @@ export default function MainNavigator() {
       >
         <Tab.Screen 
           name="Dashboard" 
-          component={FarmerDashboardScreen}
-          options={{ title: 'Dashboard' }}
+          component={FarmerDashboardStack}
+          options={{ title: 'Dashboard', headerShown: false }}
         />
         <Tab.Screen 
           name="Products" 
-          component={FarmerProductsScreen}
-          options={{ title: 'My Products' }}
+          component={FarmerProductsStack}
+          options={{ title: 'My Products', headerShown: false }}
         />
         <Tab.Screen 
           name="Orders" 

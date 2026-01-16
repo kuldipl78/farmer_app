@@ -126,7 +126,10 @@ export default function CartScreen({ navigation }) {
                   },
                   {
                     text: 'OK',
-                    onPress: () => navigation.navigate('Home')
+                    onPress: () => {
+                      // Navigate to Home tab
+                      navigation.getParent()?.navigate('Home') || navigation.navigate('Home');
+                    }
                   }
                 ]
               );

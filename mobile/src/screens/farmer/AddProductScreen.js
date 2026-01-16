@@ -8,7 +8,8 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Image
+  Image,
+  StyleSheet
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -27,6 +28,7 @@ export default function AddProductScreen({ navigation }) {
   });
   const [categories, setCategories] = useState([]);
   const [productImage, setProductImage] = useState(null);
+  const [randomImageUri, setRandomImageUri] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
   
@@ -34,7 +36,17 @@ export default function AddProductScreen({ navigation }) {
 
   useEffect(() => {
     loadCategories();
+    // Generate a random placeholder image
+    generateRandomImage();
   }, []);
+
+  const generateRandomImage = () => {
+    // Generate a random number for variety
+    const randomId = Math.floor(Math.random() * 1000);
+    // Use Picsum Photos for random placeholder images
+    const imageUri = `https://picsum.photos/seed/${randomId}/400/300`;
+    setRandomImageUri(imageUri);
+  };
 
   const loadCategories = async () => {
     try {
@@ -108,9 +120,12 @@ export default function AddProductScreen({ navigation }) {
         category_id: parseInt(category_id)
       };
 
-      // In a real app, you'd upload the image to a server first
+      // Use selected image or random placeholder image
       if (productImage) {
         productData.image_uri = productImage.uri;
+      } else if (randomImageUri) {
+        // Use random placeholder image if no image was selected
+        productData.image_uri = randomImageUri;
       }
 
       await productsAPI.createProduct(productData, token);
@@ -131,58 +146,72 @@ export default function AddProductScreen({ navigation }) {
   const unitTypes = ['kg', 'lb', 'piece', 'bunch', 'box', 'bag'];
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <ScrollView className="flex-1">
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.scrollView}>
         {/* Header */}
-        <View className="bg-white px-6 py-4 border-b border-gray-200">
-          <View className="flex-row items-center">
+        <View style={styles.header}>
+          <View style={styles.headerRow}>
             <TouchableOpacity onPress={() => navigation.goBack()}>
               <Ionicons name="arrow-back" size={24} color="#374151" />
             </TouchableOpacity>
-            <Text className="text-xl font-bold text-gray-800 ml-4">Add New Product</Text>
+            <Text style={styles.headerTitle}>Add New Product</Text>
           </View>
         </View>
 
-        <View className="px-6 py-6">
+        <View style={styles.content}>
           {/* Product Image */}
-          <View className="mb-6">
-            <Text className="text-gray-700 mb-3 font-medium">Product Image</Text>
+          <View style={styles.imageSection}>
+            <Text style={styles.label}>Product Image</Text>
             <TouchableOpacity
-              className="border-2 border-dashed border-gray-300 rounded-lg p-8 items-center"
+              style={styles.imagePicker}
               onPress={pickImage}
             >
               {productImage ? (
                 <Image
                   source={{ uri: productImage.uri }}
-                  className="w-32 h-32 rounded-lg mb-4"
+                  style={styles.selectedImage}
                   resizeMode="cover"
                 />
+              ) : randomImageUri ? (
+                <View style={styles.imageContainer}>
+                  <Image
+                    source={{ uri: randomImageUri }}
+                    style={styles.placeholderImage}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.imageOverlay}>
+                    <Ionicons name="camera" size={32} color="white" />
+                    <Text style={styles.imageOverlayText}>Tap to change image</Text>
+                  </View>
+                </View>
               ) : (
-                <View className="items-center">
+                <View style={styles.imagePlaceholder}>
                   <Ionicons name="camera" size={48} color="#9CA3AF" />
-                  <Text className="text-gray-500 mt-2">Tap to add image</Text>
+                  <Text style={styles.imagePlaceholderText}>Tap to add image</Text>
                 </View>
               )}
             </TouchableOpacity>
           </View>
 
           {/* Product Name */}
-          <View className="mb-4">
-            <Text className="text-gray-700 mb-2 font-medium">Product Name *</Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Product Name *</Text>
             <TextInput
-              className="border border-gray-300 rounded-lg px-4 py-3 text-base bg-white"
+              style={styles.input}
               placeholder="Enter product name"
+              placeholderTextColor="#9CA3AF"
               value={formData.name}
               onChangeText={(value) => handleInputChange('name', value)}
             />
           </View>
 
           {/* Description */}
-          <View className="mb-4">
-            <Text className="text-gray-700 mb-2 font-medium">Description *</Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Description *</Text>
             <TextInput
-              className="border border-gray-300 rounded-lg px-4 py-3 text-base bg-white h-24"
+              style={[styles.input, styles.textArea]}
               placeholder="Describe your product..."
+              placeholderTextColor="#9CA3AF"
               value={formData.description}
               onChangeText={(value) => handleInputChange('description', value)}
               multiline
@@ -191,27 +220,25 @@ export default function AddProductScreen({ navigation }) {
           </View>
 
           {/* Category */}
-          <View className="mb-4">
-            <Text className="text-gray-700 mb-2 font-medium">Category *</Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Category *</Text>
             {loadingCategories ? (
               <ActivityIndicator size="small" color="#16a34a" />
             ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
                 {categories.map((category) => (
                   <TouchableOpacity
                     key={category.id}
-                    className={`mr-3 px-4 py-2 rounded-full border ${
-                      formData.category_id === category.id.toString()
-                        ? 'bg-primary-600 border-primary-600'
-                        : 'bg-white border-gray-300'
-                    }`}
+                    style={[
+                      styles.categoryButton,
+                      formData.category_id === category.id.toString() && styles.categoryButtonActive
+                    ]}
                     onPress={() => handleInputChange('category_id', category.id.toString())}
                   >
-                    <Text className={`font-medium ${
-                      formData.category_id === category.id.toString()
-                        ? 'text-white'
-                        : 'text-gray-600'
-                    }`}>
+                    <Text style={[
+                      styles.categoryButtonText,
+                      formData.category_id === category.id.toString() && styles.categoryButtonTextActive
+                    ]}>
                       {category.name}
                     </Text>
                   </TouchableOpacity>
@@ -221,33 +248,34 @@ export default function AddProductScreen({ navigation }) {
           </View>
 
           {/* Price and Unit */}
-          <View className="flex-row space-x-4 mb-4">
-            <View className="flex-1">
-              <Text className="text-gray-700 mb-2 font-medium">Price per Unit *</Text>
+          <View style={styles.row}>
+            <View style={styles.halfWidth}>
+              <Text style={styles.label}>Price per Unit *</Text>
               <TextInput
-                className="border border-gray-300 rounded-lg px-4 py-3 text-base bg-white"
+                style={styles.input}
                 placeholder="0.00"
+                placeholderTextColor="#9CA3AF"
                 value={formData.price_per_unit}
                 onChangeText={(value) => handleInputChange('price_per_unit', value)}
                 keyboardType="decimal-pad"
               />
             </View>
-            <View className="flex-1">
-              <Text className="text-gray-700 mb-2 font-medium">Unit Type *</Text>
+            <View style={styles.halfWidth}>
+              <Text style={styles.label}>Unit Type *</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {unitTypes.map((unit) => (
                   <TouchableOpacity
                     key={unit}
-                    className={`mr-2 px-3 py-2 rounded-lg border ${
-                      formData.unit_type === unit
-                        ? 'bg-primary-600 border-primary-600'
-                        : 'bg-white border-gray-300'
-                    }`}
+                    style={[
+                      styles.unitButton,
+                      formData.unit_type === unit && styles.unitButtonActive
+                    ]}
                     onPress={() => handleInputChange('unit_type', unit)}
                   >
-                    <Text className={`text-sm ${
-                      formData.unit_type === unit ? 'text-white' : 'text-gray-600'
-                    }`}>
+                    <Text style={[
+                      styles.unitButtonText,
+                      formData.unit_type === unit && styles.unitButtonTextActive
+                    ]}>
                       {unit}
                     </Text>
                   </TouchableOpacity>
@@ -257,11 +285,12 @@ export default function AddProductScreen({ navigation }) {
           </View>
 
           {/* Quantity Available */}
-          <View className="mb-4">
-            <Text className="text-gray-700 mb-2 font-medium">Quantity Available *</Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Quantity Available *</Text>
             <TextInput
-              className="border border-gray-300 rounded-lg px-4 py-3 text-base bg-white"
+              style={styles.input}
               placeholder="Enter quantity"
+              placeholderTextColor="#9CA3AF"
               value={formData.quantity_available}
               onChangeText={(value) => handleInputChange('quantity_available', value)}
               keyboardType="numeric"
@@ -269,32 +298,33 @@ export default function AddProductScreen({ navigation }) {
           </View>
 
           {/* Organic Toggle */}
-          <View className="mb-6">
+          <View style={styles.organicSection}>
             <TouchableOpacity
-              className="flex-row items-center"
+              style={styles.organicToggle}
               onPress={() => handleInputChange('is_organic', !formData.is_organic)}
             >
-              <View className={`w-6 h-6 rounded border-2 mr-3 items-center justify-center ${
-                formData.is_organic ? 'bg-primary-600 border-primary-600' : 'border-gray-300'
-              }`}>
+              <View style={[
+                styles.checkbox,
+                formData.is_organic && styles.checkboxActive
+              ]}>
                 {formData.is_organic && (
                   <Ionicons name="checkmark" size={16} color="white" />
                 )}
               </View>
-              <Text className="text-gray-700 font-medium">This is an organic product</Text>
+              <Text style={styles.organicText}>This is an organic product</Text>
             </TouchableOpacity>
           </View>
 
           {/* Submit Button */}
           <TouchableOpacity
-            className="bg-primary-600 py-4 rounded-lg"
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
             onPress={handleSubmit}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text className="text-white text-lg font-semibold text-center">
+              <Text style={styles.submitButtonText}>
                 Add Product
               </Text>
             )}
@@ -304,3 +334,203 @@ export default function AddProductScreen({ navigation }) {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  header: {
+    backgroundColor: 'white',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginLeft: 16,
+  },
+  content: {
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+  },
+  imageSection: {
+    marginBottom: 24,
+  },
+  imagePicker: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+  },
+  imageContainer: {
+    width: 128,
+    height: 128,
+    borderRadius: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  placeholderImage: {
+    width: '100%',
+    height: '100%',
+  },
+  imageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageOverlayText: {
+    color: 'white',
+    fontSize: 12,
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  selectedImage: {
+    width: 128,
+    height: 128,
+    borderRadius: 8,
+  },
+  imagePlaceholder: {
+    alignItems: 'center',
+  },
+  imagePlaceholderText: {
+    color: '#6b7280',
+    marginTop: 8,
+    fontSize: 14,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    backgroundColor: 'white',
+    color: '#1f2937',
+  },
+  textArea: {
+    height: 96,
+    paddingTop: 12,
+  },
+  row: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    gap: 16,
+  },
+  halfWidth: {
+    flex: 1,
+  },
+  categoryScroll: {
+    marginBottom: 8,
+  },
+  categoryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: 'white',
+    marginRight: 12,
+  },
+  categoryButtonActive: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+  categoryButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  categoryButtonTextActive: {
+    color: 'white',
+  },
+  unitButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: 'white',
+    marginRight: 8,
+  },
+  unitButtonActive: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+  unitButtonText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  unitButtonTextActive: {
+    color: 'white',
+  },
+  organicSection: {
+    marginBottom: 24,
+  },
+  organicToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#d1d5db',
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxActive: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+  organicText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  submitButton: {
+    backgroundColor: '#16a34a',
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+});
