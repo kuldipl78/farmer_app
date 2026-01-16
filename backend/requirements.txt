@@ -1,0 +1,15 @@
+# Core dependencies
+requests==2.31.0
+
+# Database drivers (choose based on your database choice)
+# For PostgreSQL (recommended for Railway)
+psycopg2-binary==2.9.7
+
+# For MySQL (if you prefer MySQL)
+PyMySQL==1.1.0
+
+# For environment variables
+python-dotenv==1.0.0
+
+# For better HTTP server (optional upgrade)
+gunicorn==21.2.0

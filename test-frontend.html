@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌾 Farmer Marketplace - Test Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-green-600 mb-2">🌾 Farmer Marketplace</h1>
+            <p class="text-gray-600">Test Interface - Backend API Testing</p>
+        </header>
+
+        <!-- API Status -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">API Status</h2>
+            <div id="api-status" class="space-y-2">
+                <div class="flex items-center">
+                    <div id="health-status" class="w-3 h-3 rounded-full bg-gray-400 mr-2"></div>
+                    <span>Backend Health: <span id="health-text">Checking...</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Registration -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">User Registration</h2>
+            <form id="register-form" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" id="firstName" placeholder="First Name" class="border rounded-lg px-3 py-2" required>
+                    <input type="text" id="lastName" placeholder="Last Name" class="border rounded-lg px-3 py-2" required>
+                </div>
+                <input type="email" id="email" placeholder="Email" class="w-full border rounded-lg px-3 py-2" required>
+                <input type="password" id="password" placeholder="Password" class="w-full border rounded-lg px-3 py-2" required>
+                <select id="role" class="w-full border rounded-lg px-3 py-2" required>
+                    <option value="">Select Role</option>
+                    <option value="customer">Customer</option>
+                    <option value="farmer">Farmer</option>
+                </select>
+                <button type="submit" class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">
+                    Register
+                </button>
+            </form>
+            <div id="register-result" class="mt-4"></div>
+        </div>
+
+        <!-- User Login -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">User Login</h2>
+            <form id="login-form" class="space-y-4">
+                <input type="email" id="loginEmail" placeholder="Email" class="w-full border rounded-lg px-3 py-2" required>
+                <input type="password" id="loginPassword" placeholder="Password" class="w-full border rounded-lg px-3 py-2" required>
+                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+                    Login
+                </button>
+            </form>
+            <div id="login-result" class="mt-4"></div>
+        </div>
+
+        <!-- Categories -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Categories</h2>
+            <div id="categories-list" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                Loading...
+            </div>
+        </div>
+
+        <!-- Products -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">Products</h2>
+            <div id="products-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                Loading...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let authToken = null;
+
+        // Check API health
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                document.getElementById('health-status').className = 'w-3 h-3 rounded-full bg-green-500 mr-2';
+                document.getElementById('health-text').textContent = 'Online';
+            } catch (error) {
+                document.getElementById('health-status').className = 'w-3 h-3 rounded-full bg-red-500 mr-2';
+                document.getElementById('health-text').textContent = 'Offline';
+            }
+        }
+
+        // Load categories
+        async function loadCategories() {
+            try {
+                const response = await fetch(`${API_BASE}/categories/`);
+                const categories = await response.json();
+                const container = document.getElementById('categories-list');
+                container.innerHTML = categories.map(cat => `
+                    <div class="border rounded-lg p-3 text-center">
+                        <h3 class="font-semibold">${cat.name}</h3>
+                        <p class="text-sm text-gray-600">${cat.description}</p>
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('categories-list').innerHTML = '<p class="text-red-500">Error loading categories</p>';
+            }
+        }
+
+        // Load products
+        async function loadProducts() {
+            try {
+                const response = await fetch(`${API_BASE}/products/`);
+                const products = await response.json();
+                const container = document.getElementById('products-list');
+                container.innerHTML = products.map(product => `
+                    <div class="border rounded-lg p-4">
+                        <h3 class="font-semibold">${product.name}</h3>
+                        <p class="text-sm text-gray-600 mb-2">${product.description}</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-green-600 font-bold">$${product.price_per_unit}/${product.unit_type}</span>
+                            <span class="text-sm text-gray-500">${product.quantity_available} available</span>
+                        </div>
+                        ${product.is_organic ? '<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full mt-2">Organic</span>' : ''}
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('products-list').innerHTML = '<p class="text-red-500">Error loading products</p>';
+            }
+        }
+
+        // Register form
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                role: document.getElementById('role').value,
+                first_name: document.getElementById('firstName').value,
+                last_name: document.getElementById('lastName').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('register-result').innerHTML = 
+                        `<p class="text-green-600">✅ Registration successful! Welcome ${data.first_name}!</p>`;
+                    document.getElementById('register-form').reset();
+                } else {
+                    document.getElementById('register-result').innerHTML = 
+                        `<p class="text-red-600">❌ ${data.detail}</p>`;
+                }
+            } catch (error) {
+                document.getElementById('register-result').innerHTML = 
+                    `<p class="text-red-600">❌ Network error: ${error.message}</p>`;
+            }
+        });
+
+        // Login form
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                email: document.getElementById('loginEmail').value,
+                password: document.getElementById('loginPassword').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.access_token;
+                    document.getElementById('login-result').innerHTML = 
+                        `<p class="text-green-600">✅ Login successful! Token: ${data.access_token.substring(0, 20)}...</p>`;
+                    document.getElementById('login-form').reset();
+                } else {
+                    document.getElementById('login-result').innerHTML = 
+                        `<p class="text-red-600">❌ ${data.detail}</p>`;
+                }
+            } catch (error) {
+                document.getElementById('login-result').innerHTML = 
+                    `<p class="text-red-600">❌ Network error: ${error.message}</p>`;
+            }
+        });
+
+        // Initialize
+        checkHealth();
+        loadCategories();
+        loadProducts();
+    </script>
+</body>
+</html>
