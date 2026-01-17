@@ -38,8 +38,8 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy"}
+    """Health check endpoint - Updated."""
+    return {"status": "healthy", "version": "1.1.0"}
 
 
 if __name__ == "__main__":
