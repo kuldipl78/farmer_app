@@ -9,8 +9,8 @@ from ..config import settings
 from ..database import get_db
 from ..models.user import User, UserRole
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing - using PBKDF2 instead of bcrypt to avoid 72-byte limitation
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 # JWT token scheme
 security = HTTPBearer()
@@ -22,11 +22,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password."""
-    # Simple validation - bcrypt handles up to 72 bytes
-    if len(password.encode('utf-8')) > 72:
-        raise ValueError("Password too long for bcrypt")
-    
+    """Hash a password using PBKDF2 (no 72-byte limitation)."""
     return pwd_context.hash(password)
 
 
