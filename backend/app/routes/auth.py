@@ -12,49 +12,62 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 @router.post("/register")
 def register_user(user_data: dict, db: Session = Depends(get_db)):
     """Register a new user."""
-    from ..schemas.auth import UserRegister
-    from ..schemas.user import UserResponse
-    
-    # Validate input data
-    validated_data = UserRegister(**user_data)
-    
-    # Check if user already exists
-    existing_user = db.query(User).filter(User.email == validated_data.email).first()
-    if existing_user:
+    try:
+        from ..schemas.auth import UserRegister
+        from ..schemas.user import UserResponse
+        
+        # Validate input data
+        validated_data = UserRegister(**user_data)
+        
+        # Check if user already exists
+        existing_user = db.query(User).filter(User.email == validated_data.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+        
+        # Create new user
+        hashed_password = get_password_hash(validated_data.password)
+        db_user = User(
+            email=validated_data.email,
+            password_hash=hashed_password,
+            role=validated_data.role,
+            first_name=validated_data.first_name,
+            last_name=validated_data.last_name,
+            phone=validated_data.phone
+        )
+        
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        
+        # Create role-specific profile
+        if validated_data.role == "farmer":
+            farmer_profile = FarmerProfile(
+                user_id=db_user.id,
+                farm_name="My Farm",  # Default name, can be updated later
+                farm_address="Address to be updated"  # Default address, can be updated later
+            )
+            db.add(farmer_profile)
+        elif validated_data.role == "customer":
+            customer_profile = CustomerProfile(user_id=db_user.id)
+            db.add(customer_profile)
+        
+        db.commit()
+        return db_user
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions (like email already exists)
+        raise
+    except Exception as e:
+        # Log the error and rollback
+        db.rollback()
+        print(f"Registration error: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Registration failed: {str(e)}"
         )
-    
-    # Create new user
-    hashed_password = get_password_hash(validated_data.password)
-    db_user = User(
-        email=validated_data.email,
-        password_hash=hashed_password,
-        role=validated_data.role,
-        first_name=validated_data.first_name,
-        last_name=validated_data.last_name,
-        phone=validated_data.phone
-    )
-    
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    
-    # Create role-specific profile
-    if validated_data.role == "farmer":
-        farmer_profile = FarmerProfile(
-            user_id=db_user.id,
-            farm_name="",  # Will be updated later
-            farm_address=""  # Will be updated later
-        )
-        db.add(farmer_profile)
-    elif validated_data.role == "customer":
-        customer_profile = CustomerProfile(user_id=db_user.id)
-        db.add(customer_profile)
-    
-    db.commit()
-    return db_user
 
 
 @router.post("/login")

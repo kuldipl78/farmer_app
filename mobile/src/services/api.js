@@ -6,9 +6,6 @@ const getBaseURL = () => {
   // Production URL (Render deployment)
   const RENDER_URL = 'https://farmer-api-v2.onrender.com';
   
-  // For local development (if needed)
-  const LOCAL_URL = 'http://localhost:8000';
-  
   // Use Render URL for production
   return RENDER_URL;
 };
@@ -120,7 +117,7 @@ export const authAPI = {
       
       console.log('📝 Final registration data:', { 
         ...registrationData, 
-        password: '[HIDDEN]' 
+        password: '[HIDDEN]'
       });
       
       const response = await api.post('/auth/register', registrationData);
