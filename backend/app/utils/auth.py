@@ -9,8 +9,13 @@ from ..config import settings
 from ..database import get_db
 from ..models.user import User, UserRole
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing with explicit bcrypt configuration
+pwd_context = CryptContext(
+    schemes=["bcrypt"], 
+    deprecated="auto",
+    bcrypt__rounds=12,  # Explicit rounds
+    bcrypt__ident="2b"  # Use 2b variant
+)
 
 # JWT token scheme
 security = HTTPBearer()
@@ -25,12 +30,24 @@ def get_password_hash(password: str) -> str:
     """Hash a password with bcrypt length validation."""
     # Check password length before hashing (bcrypt limitation)
     password_bytes = len(password.encode('utf-8'))
-    print(f"DEBUG get_password_hash: password length = {len(password)}, bytes = {password_bytes}")
+    print(f"DEBUG get_password_hash: password='{password}', length={len(password)}, bytes={password_bytes}")
     
     if password_bytes > 72:
         raise ValueError(f"Password is too long for bcrypt hashing: {password_bytes} bytes")
     
-    return pwd_context.hash(password)
+    if password_bytes == 0:
+        raise ValueError("Password cannot be empty")
+    
+    try:
+        result = pwd_context.hash(password)
+        print(f"DEBUG: Password hashed successfully, result length: {len(result)}")
+        return result
+    except Exception as e:
+        print(f"DEBUG: Hashing failed with error: {type(e).__name__}: {str(e)}")
+        # If it's the bcrypt 72-byte error, provide a clearer message
+        if "72 bytes" in str(e):
+            raise ValueError(f"bcrypt limitation: password too long ({password_bytes} bytes, max 72)")
+        raise ValueError(f"Password hashing failed: {str(e)}")
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
