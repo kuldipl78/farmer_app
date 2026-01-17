@@ -1,15 +1,25 @@
-# Core dependencies
+# FastAPI and core dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Database dependencies
+sqlalchemy==2.0.23
+alembic==1.13.1
+
+# Database drivers
+psycopg2-binary==2.9.7  # For PostgreSQL (Render's managed database)
+PyMySQL==1.1.0          # For MySQL (if needed)
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# Environment and utilities
+python-dotenv==1.0.0
 requests==2.31.0
 
-# Database drivers (choose based on your database choice)
-# For PostgreSQL (recommended for Railway)
-psycopg2-binary==2.9.7
-
-# For MySQL (if you prefer MySQL)
-PyMySQL==1.1.0
-
-# For environment variables
-python-dotenv==1.0.0
-
-# For better HTTP server (optional upgrade)
+# Production server
 gunicorn==21.2.0
