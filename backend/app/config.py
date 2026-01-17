@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from typing import List
+import os
 
 
 class Settings(BaseSettings):
@@ -14,7 +15,7 @@ class Settings(BaseSettings):
     # Application
     debug: bool = True
     host: str = "0.0.0.0"
-    port: int = 8000
+    port: int = int(os.getenv("PORT", 8000))  # Railway provides PORT
     
     # CORS
     allowed_origins: List[str] = [
