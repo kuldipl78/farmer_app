@@ -66,18 +66,45 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       console.log('Attempting registration...');
-      await authAPI.register(userData);
-      return { success: true };
+      console.log('Registration data:', { 
+        ...userData, 
+        password: '[HIDDEN]',
+        phone: userData.phone || 'null'
+      });
+      
+      const response = await authAPI.register(userData);
+      console.log('Registration successful:', response.data);
+      return { success: true, data: response.data };
     } catch (error) {
       console.error('Registration error:', error);
       console.error('Error details:', {
         message: error.message,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
+        headers: error.response?.headers
       });
+      
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (error.response?.status === 500) {
+        errorMessage = 'Server error occurred. The backend service may be experiencing issues. Please try again later.';
+      } else if (error.response?.status === 400) {
+        errorMessage = error.response.data?.detail || 'Invalid registration data. Please check your information.';
+      } else if (error.response?.status === 422) {
+        errorMessage = error.response.data?.detail || 'Validation error. Please check your information.';
+      } else if (error.message.includes('connect')) {
+        errorMessage = 'Cannot connect to server. Please check your internet connection.';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'Request timed out. Please try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       return { 
         success: false, 
-        error: error.response?.data?.detail || error.message || 'Registration failed. Please check your network connection.' 
+        error: errorMessage,
+        status: error.response?.status,
+        details: error.response?.data
       };
     }
   };

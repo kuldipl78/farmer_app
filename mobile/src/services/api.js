@@ -1,64 +1,173 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Configure base URL - automatically detects environment
+// Configure base URL - using Render deployment
 const getBaseURL = () => {
-  // For Railway deployment, update this URL after deployment
-  const RAILWAY_URL = 'https://your-app.railway.app'; // Update this after Railway deployment
+  // Production URL (Render deployment)
+  const RENDER_URL = 'https://farmer-api-v2.onrender.com';
   
-  // For local development - use your machine's current IP address
-  const LOCAL_URL = 'http://10.129.3.210:8001';
+  // For local development (if needed)
+  const LOCAL_URL = 'http://localhost:8000';
   
-  // You can add logic here to detect environment
-  // For now, we'll use local URL for development
-  // Change this to RAILWAY_URL when you deploy to production
-  return LOCAL_URL;
+  // Use Render URL for production
+  return RENDER_URL;
 };
 
 const BASE_URL = getBaseURL();
+
+console.log('🌐 API Base URL:', BASE_URL);
 
 const api = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
-  timeout: 10000, // 10 second timeout
+  timeout: 15000, // 15 second timeout (increased for better reliability)
 });
 
-// Add token to requests
-api.interceptors.request.use((config) => {
-  // Token will be added by individual API calls when needed
-  return config;
-});
-
-// Add response interceptor to handle 401 errors globally
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      // Clear stored auth data
-      await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('user');
-      
-      // You might want to navigate to login screen here
-      // For now, we'll let individual components handle it
-    }
+// Add request interceptor for debugging
+api.interceptors.request.use(
+  (config) => {
+    console.log(`📡 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    console.log('📡 Request data:', config.data);
+    return config;
+  },
+  (error) => {
+    console.error('📡 Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
-// Auth API
+// Add response interceptor to handle errors globally
+api.interceptors.response.use(
+  (response) => {
+    console.log(`✅ API Response: ${response.status} ${response.config.url}`);
+    return response;
+  },
+  async (error) => {
+    console.error('❌ API Error:', error);
+    
+    if (error.response) {
+      // Server responded with error status
+      console.error('❌ Response status:', error.response.status);
+      console.error('❌ Response data:', error.response.data);
+    } else if (error.request) {
+      // Request was made but no response received
+      console.error('❌ No response received:', error.request);
+    } else {
+      // Something else happened
+      console.error('❌ Request setup error:', error.message);
+    }
+    
+    if (error.response?.status === 401) {
+      // Clear stored auth data
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user');
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+// Auth API with better error handling
 export const authAPI = {
-  login: (email, password) => 
-    api.post('/auth/login', { email, password }),
+  login: async (email, password) => {
+    try {
+      console.log('🔐 Attempting login for:', email);
+      const response = await api.post('/auth/login', { email, password });
+      console.log('✅ Login successful');
+      return response;
+    } catch (error) {
+      console.error('❌ Login failed:', error.message);
+      throw error;
+    }
+  },
   
-  register: (userData) => 
-    api.post('/auth/register', userData),
+  register: async (userData) => {
+    try {
+      console.log('📝 Attempting registration for:', userData.email);
+      console.log('📝 Registration data:', { 
+        ...userData, 
+        password: '[HIDDEN]',
+        phone: userData.phone || 'null'
+      });
+      
+      // Validate required fields
+      const requiredFields = ['email', 'password', 'role', 'first_name', 'last_name'];
+      for (const field of requiredFields) {
+        if (!userData[field]) {
+          throw new Error(`${field} is required`);
+        }
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(userData.email)) {
+        throw new Error('Please enter a valid email address');
+      }
+      
+      // Validate password length
+      if (userData.password.length < 6) {
+        throw new Error('Password must be at least 6 characters long');
+      }
+      
+      // Ensure phone is either a string or null (not empty string)
+      const registrationData = {
+        ...userData,
+        phone: userData.phone && userData.phone.trim() ? userData.phone.trim() : null
+      };
+      
+      console.log('📝 Final registration data:', { 
+        ...registrationData, 
+        password: '[HIDDEN]' 
+      });
+      
+      const response = await api.post('/auth/register', registrationData);
+      console.log('✅ Registration successful');
+      return response;
+    } catch (error) {
+      console.error('❌ Registration failed:', error.message);
+      
+      // Log detailed error information
+      if (error.response) {
+        console.error('❌ Response status:', error.response.status);
+        console.error('❌ Response headers:', error.response.headers);
+        console.error('❌ Response data:', error.response.data);
+        
+        // Handle specific error cases
+        if (error.response.status === 500) {
+          console.error('❌ Server Error - This is likely a backend issue');
+          throw new Error('Server error occurred. Please try again later or contact support.');
+        } else if (error.response.status === 400) {
+          const errorMessage = error.response.data?.detail || 'Invalid registration data';
+          throw new Error(errorMessage);
+        } else if (error.response.status === 422) {
+          // Validation errors
+          const errorMessage = error.response.data?.detail || 'Validation error';
+          throw new Error(errorMessage);
+        }
+      } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        throw new Error('Cannot connect to server. Please check your internet connection.');
+      } else if (error.code === 'ECONNABORTED') {
+        throw new Error('Request timed out. Please try again.');
+      }
+      
+      throw error;
+    }
+  },
   
-  getMe: (token) => 
-    api.get('/auth/me', {
-      headers: { Authorization: `Bearer ${token}` }
-    }),
+  getMe: async (token) => {
+    try {
+      const response = await api.get('/auth/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response;
+    } catch (error) {
+      console.error('❌ Get user info failed:', error.message);
+      throw error;
+    }
+  },
 };
 
 // Products API

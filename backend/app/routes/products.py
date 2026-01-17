@@ -5,13 +5,13 @@ from ..database import get_db
 from ..models.user import User
 from ..models.product import Product
 from ..models.category import Category
-from ..schemas.product import ProductCreate, ProductUpdate, ProductResponse
+from ..schemas.product import ProductCreate, ProductUpdate, ProductResponse, ProductWithFarmer, ProductWithCategory
 from ..utils.auth import get_current_user, get_current_farmer
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
 
-@router.get("/", response_model=List[ProductResponse])
+@router.get("/", response_model=List[ProductWithCategory])
 def get_products(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
@@ -40,7 +40,7 @@ def get_products(
     return products
 
 
-@router.get("/{product_id}", response_model=ProductResponse)
+@router.get("/{product_id}", response_model=ProductWithFarmer)
 def get_product(product_id: int, db: Session = Depends(get_db)):
     """Get a specific product by ID."""
     product = db.query(Product).filter(Product.id == product_id).first()

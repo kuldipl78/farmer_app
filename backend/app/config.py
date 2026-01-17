@@ -28,11 +28,8 @@ class Settings:
             else:
                 return [origin.strip() for origin in origins_env.split(",")]
         
-        # Default origins for development
-        return [
-            "http://localhost:3000",
-            "http://localhost:19006",  # Expo default port
-            "exp://localhost:19000",   # Expo development
-        ]
+        # Allow all origins for mobile development
+        # In production, you should restrict this to specific domains
+        return ["*"]
 
 settings = Settings()

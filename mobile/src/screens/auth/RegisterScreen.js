@@ -57,7 +57,7 @@ export default function RegisterScreen({ navigation }) {
       role,
       first_name: firstName,
       last_name: lastName,
-      phone: formData.phone || null
+      phone: formData.phone && formData.phone.trim() ? formData.phone.trim() : null
     });
     setLoading(false);
 

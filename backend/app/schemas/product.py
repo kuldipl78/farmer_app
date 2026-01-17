@@ -1,11 +1,7 @@
 from pydantic import BaseModel
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List
 from datetime import datetime, date
 from decimal import Decimal
-
-if TYPE_CHECKING:
-    from .user import UserResponse
-    from .category import CategoryResponse
 
 
 class ProductBase(BaseModel):
@@ -64,3 +60,8 @@ class ProductWithCategory(ProductResponse):
     
     class Config:
         from_attributes = True
+
+
+# Import here to avoid circular imports
+from .user import UserResponse
+from .category import CategoryResponse
