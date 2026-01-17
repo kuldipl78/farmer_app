@@ -24,8 +24,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     """Hash a password with bcrypt length validation."""
     # Check password length before hashing (bcrypt limitation)
-    if len(password.encode('utf-8')) > 72:
-        raise ValueError("Password is too long for bcrypt hashing")
+    password_bytes = len(password.encode('utf-8'))
+    print(f"DEBUG get_password_hash: password length = {len(password)}, bytes = {password_bytes}")
+    
+    if password_bytes > 72:
+        raise ValueError(f"Password is too long for bcrypt hashing: {password_bytes} bytes")
     
     return pwd_context.hash(password)
 

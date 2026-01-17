@@ -14,15 +14,10 @@ def register_user(user_data: dict, db: Session = Depends(get_db)):
     """Register a new user."""
     try:
         # Debug logging
-        print(f"DEBUG: Received password length: {len(user_data.get('password', ''))}")
-        print(f"DEBUG: Password bytes length: {len(user_data.get('password', '').encode('utf-8'))}")
-        
-        # Check password length FIRST, before any processing
-        if 'password' in user_data and len(user_data['password'].encode('utf-8')) > 72:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Password is too long. Please use a password with 72 characters or fewer."
-            )
+        password = user_data.get('password', '')
+        print(f"DEBUG: Received password length: {len(password)}")
+        print(f"DEBUG: Password bytes length: {len(password.encode('utf-8'))}")
+        print(f"DEBUG: Password preview: {password[:10]}...")
         
         from ..schemas.auth import UserRegister
         from ..schemas.user import UserResponse
@@ -40,11 +35,20 @@ def register_user(user_data: dict, db: Session = Depends(get_db)):
         
         # Create new user
         try:
+            print(f"DEBUG: About to hash password...")
             hashed_password = get_password_hash(validated_data.password)
+            print(f"DEBUG: Password hashed successfully")
         except ValueError as e:
+            print(f"DEBUG: ValueError in password hashing: {e}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Password is too long. Please use a password with 72 characters or fewer."
+                detail=f"Password validation error: {str(e)}"
+            )
+        except Exception as e:
+            print(f"DEBUG: Unexpected error in password hashing: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Password hashing failed: {str(e)}"
             )
         
         db_user = User(
