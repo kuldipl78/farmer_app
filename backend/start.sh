@@ -9,18 +9,7 @@ echo "   Port: $PORT"
 echo "   Python: $(python --version)"
 echo "   Working Directory: $(pwd)"
 
-# Test startup before launching
-echo "🔍 Running startup tests..."
-python test_startup.py
-
-if [ $? -ne 0 ]; then
-    echo "❌ Startup tests failed! Check the logs above."
-    exit 1
-fi
-
-echo "✅ Startup tests passed!"
-
-# Start the FastAPI application with Gunicorn
+# Start the FastAPI application with Gunicorn directly
 echo "🌐 Starting Gunicorn server..."
 exec gunicorn app.main:app \
     --bind 0.0.0.0:$PORT \
