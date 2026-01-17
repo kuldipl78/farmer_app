@@ -39,7 +39,14 @@ def register_user(user_data: dict, db: Session = Depends(get_db)):
             )
         
         # Create new user
-        hashed_password = get_password_hash(validated_data.password)
+        try:
+            hashed_password = get_password_hash(validated_data.password)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password is too long. Please use a password with 72 characters or fewer."
+            )
+        
         db_user = User(
             email=validated_data.email,
             password_hash=hashed_password,
@@ -112,3 +119,15 @@ def login_user(user_credentials: dict, db: Session = Depends(get_db)):
 def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user information."""
     return current_user
+
+
+@router.post("/test-password")
+def test_password_length(data: dict):
+    """Test endpoint to debug password issues."""
+    password = data.get('password', '')
+    return {
+        "password_length": len(password),
+        "password_bytes": len(password.encode('utf-8')),
+        "is_too_long": len(password.encode('utf-8')) > 72,
+        "password_preview": password[:10] + "..." if len(password) > 10 else password
+    }

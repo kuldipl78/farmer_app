@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Registration Test</title>
+</head>
+<body>
+    <h1>Quick Registration Test</h1>
+    <button onclick="testRegistration()">Test Registration</button>
+    <div id="result"></div>
+
+    <script>
+        async function testRegistration() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                // First test the password length endpoint
+                console.log('Testing password length...');
+                const passwordTest = await fetch('https://farmer-api-v2.onrender.com/auth/test-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ password: 'login123' })
+                });
+                
+                const passwordData = await passwordTest.json();
+                console.log('Password test result:', passwordData);
+                
+                if (passwordData.is_too_long) {
+                    resultDiv.innerHTML = `
+                        <h2 style="color: red;">❌ PASSWORD TOO LONG</h2>
+                        <p>Password length: ${passwordData.password_length} characters</p>
+                        <p>Password bytes: ${passwordData.password_bytes} bytes</p>
+                        <p>Preview: ${passwordData.password_preview}</p>
+                    `;
+                    return;
+                }
+                
+                // Now test actual registration
+                const testData = {
+                    email: `test_${Date.now()}@example.com`,
+                    password: 'login123',
+                    role: 'customer',
+                    first_name: 'Test',
+                    last_name: 'User',
+                    phone: '9879879870'
+                };
+                
+                console.log('Testing registration...');
+                
+                const response = await fetch('https://farmer-api-v2.onrender.com/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h2 style="color: green;">✅ SUCCESS!</h2>
+                        <p>Registration worked!</p>
+                        <p><strong>Password "login123" works! Use it in your mobile app.</strong></p>
+                        <p>Password info: ${passwordData.password_length} chars, ${passwordData.password_bytes} bytes</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <h2 style="color: red;">❌ REGISTRATION FAILED</h2>
+                        <p>Status: ${response.status}</p>
+                        <p>Error: ${data.detail || JSON.stringify(data)}</p>
+                        <p>Password info: ${passwordData.password_length} chars, ${passwordData.password_bytes} bytes</p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h2 style="color: red;">❌ ERROR</h2>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
