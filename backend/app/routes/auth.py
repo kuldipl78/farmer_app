@@ -13,18 +13,22 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 def register_user(user_data: dict, db: Session = Depends(get_db)):
     """Register a new user."""
     try:
+        # Debug logging
+        print(f"DEBUG: Received password length: {len(user_data.get('password', ''))}")
+        print(f"DEBUG: Password bytes length: {len(user_data.get('password', '').encode('utf-8'))}")
+        
+        # Check password length FIRST, before any processing
+        if 'password' in user_data and len(user_data['password'].encode('utf-8')) > 72:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password is too long. Please use a password with 72 characters or fewer."
+            )
+        
         from ..schemas.auth import UserRegister
         from ..schemas.user import UserResponse
         
         # Validate input data
         validated_data = UserRegister(**user_data)
-        
-        # Additional validation for bcrypt limitation
-        if len(validated_data.password.encode('utf-8')) > 72:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Password is too long. Please use a password with 72 characters or fewer."
-            )
         
         # Check if user already exists
         existing_user = db.query(User).filter(User.email == validated_data.email).first()
