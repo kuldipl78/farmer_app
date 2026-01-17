@@ -3,8 +3,10 @@
 
 set -o errexit  # exit on error
 
+# Upgrade pip and install wheel
+pip install --upgrade pip setuptools wheel
+
 # Install Python dependencies
-pip install --upgrade pip
 pip install -r requirements.txt
 
 # Initialize database (create tables and sample data)

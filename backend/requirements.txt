@@ -1,16 +1,14 @@
 # FastAPI and core dependencies
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-pydantic==2.5.0
-pydantic-settings==2.1.0
+fastapi==0.103.2
+uvicorn[standard]==0.23.2
+pydantic==2.4.2
+pydantic-settings==2.0.3
 
 # Database dependencies
-sqlalchemy==2.0.23
-alembic==1.13.1
+sqlalchemy==2.0.21
 
 # Database drivers
-psycopg2-binary==2.9.7  # For PostgreSQL (Render's managed database)
-PyMySQL==1.1.0          # For MySQL (if needed)
+psycopg2-binary==2.9.7
 
 # Authentication
 python-jose[cryptography]==3.3.0

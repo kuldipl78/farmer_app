@@ -1,6 +1,5 @@
 from pydantic_settings import BaseSettings
 from typing import List
-import os
 
 
 class Settings(BaseSettings):
@@ -15,14 +14,13 @@ class Settings(BaseSettings):
     # Application
     debug: bool = True
     host: str = "0.0.0.0"
-    port: int = int(os.getenv("PORT", 8000))  # Render provides PORT
+    port: int = 8000
     
-    # CORS - Allow all origins in production for now
+    # CORS
     allowed_origins: List[str] = [
         "http://localhost:3000",
         "http://localhost:19006",  # Expo default port
         "exp://localhost:19000",   # Expo development
-        "*"  # Allow all origins for production (you can restrict this later)
     ]
     
     class Config:
