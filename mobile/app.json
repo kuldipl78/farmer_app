@@ -25,6 +25,8 @@
       }
     },
     "android": {
+      "package": "com.farmermarketplace.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#16a34a"
       },
