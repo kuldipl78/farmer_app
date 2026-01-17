@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from typing import List
+import os
 
 
 class Settings(BaseSettings):
@@ -16,15 +17,31 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     
-    # CORS
-    allowed_origins: List[str] = [
-        "http://localhost:3000",
-        "http://localhost:19006",  # Expo default port
-        "exp://localhost:19000",   # Expo development
-    ]
-    
     class Config:
         env_file = ".env"
+    
+    @property
+    def allowed_origins(self) -> List[str]:
+        """Get allowed origins from environment or use defaults."""
+        origins_env = os.getenv("ALLOWED_ORIGINS")
+        
+        if origins_env:
+            if origins_env.strip() == "*":
+                return ["*"]
+            else:
+                return [origin.strip() for origin in origins_env.split(",")]
+        
+        # Default origins for development
+        return [
+            "http://localhost:3000",
+            "http://localhost:19006",  # Expo default port
+            "exp://localhost:19000",   # Expo development
+        ]
+    
+    @property
+    def port_from_env(self) -> int:
+        """Get port from environment or default."""
+        return int(os.getenv("PORT", self.port))
 
 
 settings = Settings()

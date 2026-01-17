@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .config import settings
+from .config_simple import settings
 from .routes import auth, products, orders, categories
 
 # Create FastAPI app
@@ -47,6 +47,6 @@ if __name__ == "__main__":
     uvicorn.run(
         "app.main:app",
         host=settings.host,
-        port=settings.port_from_env,
+        port=settings.port,
         reload=settings.debug
     )
