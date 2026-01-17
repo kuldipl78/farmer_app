@@ -13,14 +13,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 def register_user(user_data: dict, db: Session = Depends(get_db)):
     """Register a new user."""
     try:
-        # Debug logging
-        password = user_data.get('password', '')
-        print(f"DEBUG: Received password length: {len(password)}")
-        print(f"DEBUG: Password bytes length: {len(password.encode('utf-8'))}")
-        print(f"DEBUG: Password preview: {password[:10]}...")
-        
         from ..schemas.auth import UserRegister
-        from ..schemas.user import UserResponse
         
         # Validate input data
         validated_data = UserRegister(**user_data)
@@ -34,23 +27,7 @@ def register_user(user_data: dict, db: Session = Depends(get_db)):
             )
         
         # Create new user
-        try:
-            print(f"DEBUG: About to hash password...")
-            hashed_password = get_password_hash(validated_data.password)
-            print(f"DEBUG: Password hashed successfully")
-        except ValueError as e:
-            print(f"DEBUG: ValueError in password hashing: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Password validation error: {str(e)}"
-            )
-        except Exception as e:
-            print(f"DEBUG: Unexpected error in password hashing: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Password hashing failed: {str(e)}"
-            )
-        
+        hashed_password = get_password_hash(validated_data.password)
         db_user = User(
             email=validated_data.email,
             password_hash=hashed_password,
@@ -68,8 +45,8 @@ def register_user(user_data: dict, db: Session = Depends(get_db)):
         if validated_data.role == "farmer":
             farmer_profile = FarmerProfile(
                 user_id=db_user.id,
-                farm_name="My Farm",  # Default name, can be updated later
-                farm_address="Address to be updated"  # Default address, can be updated later
+                farm_name="My Farm",
+                farm_address="Address to be updated"
             )
             db.add(farmer_profile)
         elif validated_data.role == "customer":
@@ -80,12 +57,19 @@ def register_user(user_data: dict, db: Session = Depends(get_db)):
         return db_user
         
     except HTTPException:
-        # Re-raise HTTP exceptions (like email already exists)
         raise
+    except ValueError as e:
+        if "Password too long" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password is too long. Please use 72 characters or fewer."
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
-        # Log the error and rollback
         db.rollback()
-        print(f"Registration error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Registration failed: {str(e)}"
