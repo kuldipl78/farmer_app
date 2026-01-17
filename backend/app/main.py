@@ -47,6 +47,6 @@ if __name__ == "__main__":
     uvicorn.run(
         "app.main:app",
         host=settings.host,
-        port=settings.port_from_env,
+        port=settings.port,
         reload=settings.debug
     )

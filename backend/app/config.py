@@ -1,24 +1,21 @@
-from pydantic_settings import BaseSettings
-from typing import List
 import os
+from typing import List
 
-
-class Settings(BaseSettings):
-    # Database
-    database_url: str = "sqlite:///./farmer_marketplace.db"
-    
-    # JWT
-    secret_key: str = "your-secret-key-change-in-production"
-    algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
-    
-    # Application
-    debug: bool = True
-    host: str = "0.0.0.0"
-    port: int = 8000
-    
-    class Config:
-        env_file = ".env"
+# Simple configuration without Pydantic validation issues
+class Settings:
+    def __init__(self):
+        # Database
+        self.database_url = os.getenv("DATABASE_URL", "sqlite:///./farmer_marketplace.db")
+        
+        # JWT
+        self.secret_key = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+        self.algorithm = os.getenv("ALGORITHM", "HS256")
+        self.access_token_expire_minutes = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+        
+        # Application
+        self.debug = os.getenv("DEBUG", "True").lower() == "true"
+        self.host = os.getenv("HOST", "0.0.0.0")
+        self.port = int(os.getenv("PORT", "8000"))
     
     @property
     def allowed_origins(self) -> List[str]:
@@ -37,11 +34,5 @@ class Settings(BaseSettings):
             "http://localhost:19006",  # Expo default port
             "exp://localhost:19000",   # Expo development
         ]
-    
-    @property
-    def port_from_env(self) -> int:
-        """Get port from environment or default."""
-        return int(os.getenv("PORT", self.port))
-
 
 settings = Settings()
