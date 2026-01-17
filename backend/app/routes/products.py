@@ -5,13 +5,12 @@ from ..database import get_db
 from ..models.user import User
 from ..models.product import Product
 from ..models.category import Category
-from ..schemas.product import ProductCreate, ProductUpdate, ProductResponse, ProductWithFarmer, ProductWithCategory
 from ..utils.auth import get_current_user, get_current_farmer
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
 
-@router.get("/", response_model=List[ProductWithCategory])
+@router.get("/")
 def get_products(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
@@ -40,7 +39,7 @@ def get_products(
     return products
 
 
-@router.get("/{product_id}", response_model=ProductWithFarmer)
+@router.get("/{product_id}")
 def get_product(product_id: int, db: Session = Depends(get_db)):
     """Get a specific product by ID."""
     product = db.query(Product).filter(Product.id == product_id).first()
@@ -52,15 +51,20 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
     return product
 
 
-@router.post("/", response_model=ProductResponse)
+@router.post("/")
 def create_product(
-    product_data: ProductCreate,
+    product_data: dict,
     current_user: User = Depends(get_current_farmer),
     db: Session = Depends(get_db)
 ):
     """Create a new product (farmers only)."""
+    from ..schemas.product import ProductCreate
+    
+    # Validate input data
+    validated_data = ProductCreate(**product_data)
+    
     # Verify category exists
-    category = db.query(Category).filter(Category.id == product_data.category_id).first()
+    category = db.query(Category).filter(Category.id == validated_data.category_id).first()
     if not category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -69,7 +73,7 @@ def create_product(
     
     db_product = Product(
         farmer_id=current_user.id,
-        **product_data.dict()
+        **validated_data.dict()
     )
     
     db.add(db_product)
@@ -78,14 +82,16 @@ def create_product(
     return db_product
 
 
-@router.put("/{product_id}", response_model=ProductResponse)
+@router.put("/{product_id}")
 def update_product(
     product_id: int,
-    product_data: ProductUpdate,
+    product_data: dict,
     current_user: User = Depends(get_current_farmer),
     db: Session = Depends(get_db)
 ):
     """Update a product (owner only)."""
+    from ..schemas.product import ProductUpdate
+    
     product = db.query(Product).filter(
         Product.id == product_id,
         Product.farmer_id == current_user.id
@@ -97,8 +103,11 @@ def update_product(
             detail="Product not found or not owned by you"
         )
     
+    # Validate input data
+    validated_data = ProductUpdate(**product_data)
+    
     # Update fields
-    update_data = product_data.dict(exclude_unset=True)
+    update_data = validated_data.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(product, field, value)
     
@@ -130,7 +139,7 @@ def delete_product(
     return {"message": "Product deleted successfully"}
 
 
-@router.get("/farmer/my-products", response_model=List[ProductResponse])
+@router.get("/farmer/my-products")
 def get_my_products(
     current_user: User = Depends(get_current_farmer),
     db: Session = Depends(get_db)

@@ -6,20 +6,24 @@ from ..database import get_db
 from ..models.user import User
 from ..models.product import Product
 from ..models.order import Order, OrderItem, OrderStatusHistory, OrderStatus
-from ..schemas.order import OrderCreate, OrderUpdate, OrderResponse
 from ..utils.auth import get_current_user, get_current_customer, get_current_farmer
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
 
-@router.post("/", response_model=OrderResponse)
+@router.post("/")
 def create_order(
-    order_data: OrderCreate,
+    order_data: dict,
     current_user: User = Depends(get_current_customer),
     db: Session = Depends(get_db)
 ):
     """Create a new order (customers only)."""
-    if not order_data.items:
+    from ..schemas.order import OrderCreate
+    
+    # Validate input data
+    validated_data = OrderCreate(**order_data)
+    
+    if not validated_data.items:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Order must contain at least one item"
@@ -30,7 +34,7 @@ def create_order(
     farmer_id = None
     order_items_data = []
     
-    for item in order_data.items:
+    for item in validated_data.items:
         product = db.query(Product).filter(Product.id == item.product_id).first()
         if not product:
             raise HTTPException(
@@ -80,10 +84,10 @@ def create_order(
         customer_id=current_user.id,
         farmer_id=farmer_id,
         total_amount=total_amount,
-        delivery_address=order_data.delivery_address,
-        delivery_date=order_data.delivery_date,
-        delivery_time=order_data.delivery_time,
-        notes=order_data.notes
+        delivery_address=validated_data.delivery_address,
+        delivery_date=validated_data.delivery_date,
+        delivery_time=validated_data.delivery_time,
+        notes=validated_data.notes
     )
     
     db.add(db_order)
@@ -112,7 +116,7 @@ def create_order(
     return db_order
 
 
-@router.get("/", response_model=List[OrderResponse])
+@router.get("/")
 def get_orders(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -128,7 +132,7 @@ def get_orders(
     return orders
 
 
-@router.get("/{order_id}", response_model=OrderResponse)
+@router.get("/{order_id}")
 def get_order(
     order_id: int,
     current_user: User = Depends(get_current_user),
@@ -157,14 +161,19 @@ def get_order(
     return order
 
 
-@router.put("/{order_id}", response_model=OrderResponse)
+@router.put("/{order_id}")
 def update_order_status(
     order_id: int,
-    order_data: OrderUpdate,
+    order_data: dict,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Update order status."""
+    from ..schemas.order import OrderUpdate
+    
+    # Validate input data
+    validated_data = OrderUpdate(**order_data)
+    
     order = db.query(Order).filter(Order.id == order_id).first()
     if not order:
         raise HTTPException(
@@ -185,15 +194,15 @@ def update_order_status(
         )
     
     # Update order
-    update_data = order_data.dict(exclude_unset=True)
+    update_data = validated_data.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(order, field, value)
     
     # Add status history if status changed
-    if order_data.status:
+    if validated_data.status:
         status_history = OrderStatusHistory(
             order_id=order.id,
-            status=order_data.status,
+            status=validated_data.status,
             notes=f"Status updated by {current_user.role}"
         )
         db.add(status_history)
