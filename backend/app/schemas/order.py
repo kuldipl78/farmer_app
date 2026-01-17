@@ -1,8 +1,11 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime, date
 from decimal import Decimal
 from ..models.order import OrderStatus
+
+if TYPE_CHECKING:
+    from .user import UserResponse
 
 
 class OrderItemBase(BaseModel):
@@ -71,7 +74,3 @@ class OrderStatusHistoryResponse(BaseModel):
     
     class Config:
         from_attributes = True
-
-
-# Import here to avoid circular imports
-from .user import UserResponse

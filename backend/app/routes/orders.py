@@ -6,7 +6,7 @@ from ..database import get_db
 from ..models.user import User
 from ..models.product import Product
 from ..models.order import Order, OrderItem, OrderStatusHistory, OrderStatus
-from ..schemas.order import OrderCreate, OrderUpdate, OrderResponse, OrderWithDetails
+from ..schemas.order import OrderCreate, OrderUpdate, OrderResponse
 from ..utils.auth import get_current_user, get_current_customer, get_current_farmer
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
@@ -112,7 +112,7 @@ def create_order(
     return db_order
 
 
-@router.get("/", response_model=List[OrderWithDetails])
+@router.get("/", response_model=List[OrderResponse])
 def get_orders(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -128,7 +128,7 @@ def get_orders(
     return orders
 
 
-@router.get("/{order_id}", response_model=OrderWithDetails)
+@router.get("/{order_id}", response_model=OrderResponse)
 def get_order(
     order_id: int,
     current_user: User = Depends(get_current_user),
