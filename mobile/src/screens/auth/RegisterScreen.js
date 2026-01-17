@@ -50,6 +50,11 @@ export default function RegisterScreen({ navigation }) {
       return;
     }
 
+    if (password.length > 72) {
+      Alert.alert('Error', 'Password is too long. Please use 72 characters or fewer.');
+      return;
+    }
+
     setLoading(true);
     const result = await register({
       email,

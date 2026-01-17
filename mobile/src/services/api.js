@@ -104,9 +104,9 @@ export const authAPI = {
         throw new Error('Please enter a valid email address');
       }
       
-      // Validate password length
-      if (userData.password.length < 6) {
-        throw new Error('Password must be at least 6 characters long');
+      // Validate password length (bcrypt limitation)
+      if (userData.password.length > 72) {
+        throw new Error('Password is too long. Please use 72 characters or fewer.');
       }
       
       // Ensure phone is either a string or null (not empty string)
@@ -135,7 +135,13 @@ export const authAPI = {
         // Handle specific error cases
         if (error.response.status === 500) {
           console.error('❌ Server Error - This is likely a backend issue');
-          throw new Error('Server error occurred. Please try again later or contact support.');
+          // Check if we have a specific error message from the server
+          const serverDetail = error.response.data?.detail;
+          if (serverDetail) {
+            throw new Error(serverDetail);
+          } else {
+            throw new Error('Server error occurred. Please try again later or contact support.');
+          }
         } else if (error.response.status === 400) {
           const errorMessage = error.response.data?.detail || 'Invalid registration data';
           throw new Error(errorMessage);

@@ -19,6 +19,13 @@ def register_user(user_data: dict, db: Session = Depends(get_db)):
         # Validate input data
         validated_data = UserRegister(**user_data)
         
+        # Additional validation for bcrypt limitation
+        if len(validated_data.password.encode('utf-8')) > 72:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password is too long. Please use a password with 72 characters or fewer."
+            )
+        
         # Check if user already exists
         existing_user = db.query(User).filter(User.email == validated_data.email).first()
         if existing_user:
