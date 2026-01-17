@@ -1,7 +1,11 @@
-from pydantic import BaseModel
-from typing import Optional, List
+from pydantic import BaseModel, ConfigDict
+from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime, date
 from decimal import Decimal
+
+if TYPE_CHECKING:
+    from .user import UserResponse
+    from .category import CategoryResponse
 
 
 class ProductBase(BaseModel):
@@ -44,24 +48,16 @@ class ProductResponse(ProductBase):
     created_at: datetime
     is_available: bool
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProductWithFarmer(ProductResponse):
     farmer: "UserResponse"
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProductWithCategory(ProductResponse):
     category: "CategoryResponse"
     
-    class Config:
-        from_attributes = True
-
-
-# Import here to avoid circular imports
-from .user import UserResponse
-from .category import CategoryResponse
+    model_config = ConfigDict(from_attributes=True)

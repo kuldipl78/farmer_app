@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime, date
 from decimal import Decimal
@@ -22,8 +22,7 @@ class OrderItemResponse(OrderItemBase):
     unit_price: Decimal
     total_price: Decimal
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OrderBase(BaseModel):
@@ -53,16 +52,14 @@ class OrderResponse(OrderBase):
     created_at: datetime
     items: List[OrderItemResponse]
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OrderWithDetails(OrderResponse):
     customer: "UserResponse"
     farmer: "UserResponse"
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OrderStatusHistoryResponse(BaseModel):
@@ -72,5 +69,4 @@ class OrderStatusHistoryResponse(BaseModel):
     notes: Optional[str] = None
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
